@@ -1,0 +1,10 @@
+﻿.performance-block {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    padding: 9px;
+    background-color: #eaeaea;
+    -webkit-border-top-left-radius: 5px;
+    z-index: 1000;
+    opacity: .9;
+}

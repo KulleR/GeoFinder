@@ -6,14 +6,16 @@ using GeoFinder.Data.Models;
 
 namespace GeoFinder.Data.Repositories.Interfaces
 {
-    public interface ILocationRepository
+    public interface ILocationRepository : IRepository<Location>
     {
         /// <summary>
-        /// Загрузка всех объектов данной сущности
+        /// Загрузка информации о местоположении по указанному названию города
         /// </summary>
-        /// <returns>Неупорядоченный список всех объектов</returns>
-        Task<List<Location>> GetAllAsync();
+        Task<List<Location>> GetAsync(string city);
 
-        Task<Location> Get(string ip);
+        /// <summary>
+        /// Загрузка информации о местоположении по индексу в списке
+        /// </summary>
+        Task<Location> GetAsync(int index);
     }
 }

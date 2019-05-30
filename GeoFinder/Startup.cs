@@ -1,42 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GeoFinder.Data;
+﻿using GeoFinder.Data;
+using GeoFinder.Data.AutoMapper;
 using GeoFinder.Data.Repositories;
 using GeoFinder.Data.Repositories.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using NLog.Extensions.Logging;
+using NLog.Web;
+using System.IO;
 
 namespace GeoFinder
 {
-    class IpRangeInfo
-    {
-        public uint ip_from;
-        public uint ip_to;
-        public uint location_index;
-    }
-
-    class LocationInfo
-    {
-        public string country;        // название страны (случайная строка с префиксом "cou_")
-        public string region;        // название области (случайная строка с префиксом "reg_")
-        public string postal;        // почтовый индекс (случайная строка с префиксом "pos_")
-        public string city;          // название города (случайная строка с префиксом "cit_")
-        public string organization;  // название организации (случайная строка с префиксом "org_")
-        public float latitude;          // широта
-        public float longitude;         // долгота
-    }
-
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -51,14 +30,18 @@ namespace GeoFinder
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
-            services.AddSingleton<DbContext>();
+            services.AddSingleton<ICommonMapper, CommonMapper>();
+            services.AddSingleton<GeoDatabaseContext>();
             services.AddScoped<IRangeRepository, RangeRepository>();
             services.AddScoped<ILocationRepository, LocationRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, GeoDatabaseContext dbContext)
         {
+            env.ConfigureNLog("nlog.config");
+            loggerFactory.AddNLog();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -66,10 +49,34 @@ namespace GeoFinder
             else
             {
                 app.UseHsts();
+                app.UseExceptionHandler(appBuilder =>
+                {
+                    appBuilder.Run(async context =>
+                    {
+                        IExceptionHandlerFeature exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+                        if (exceptionHandlerFeature != null)
+                        {
+                            ILogger logger = loggerFactory.CreateLogger("Global exception logger");
+                            logger.LogError(500, exceptionHandlerFeature.Error, exceptionHandlerFeature.Error.Message);
+                        }
+
+                        context.Response.StatusCode = 500;
+                        await context.Response.WriteAsync("An unexpected fault happened. Try again later.");
+
+                    });
+                });
             }
 
             app.UseHttpsRedirection();
-            app.UseMvc();
+            
+            app.UseStaticFiles();
+            dbContext.Load();
+            app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
+            });
         }
     }
 }

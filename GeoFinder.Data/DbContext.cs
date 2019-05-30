@@ -1,143 +1,153 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using GeoFinder.Data.AutoMapper;
+using GeoFinder.Data.Helpers;
 using GeoFinder.Data.Models;
+using GeoFinder.IO;
+using GeoFinder.IO.Models.BinaryFileModels;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace GeoFinder.Data
 {
-    public class DbContext
+    /// <summary>
+    /// Экземпляр DbContext представляет сеанс с базой данных и может использоваться для
+    /// запроса экземпляров ваших сущностей.
+    /// </summary>
+    public class GeoDatabaseContext
     {
         private string _dbFileName = "geobase.dat";
+        private readonly IHostingEnvironment _environment;
+        private readonly ILogger _logger;
+        private readonly ICommonMapper _mapper;
+        /// <summary>
+        /// Количество байтов в записи с информацией об интервалах IP адресов
+        /// </summary>
+        private const int IpRangeBytesCount = 12;
+        /// <summary>
+        /// Количество байтов в записи с информацией о местоположении
+        /// </summary>
+        private const int LocationBytesCount = 96;
+        /// <summary>
+        /// Количество байтов в записи с индексом записи местоположения
+        /// </summary>
+        private const int IndexBytesCount = 4;
 
+        public GeoModel GeoModel { get; set; }
         /// <summary>
-        /// Версия база данных
+        /// Время загрузки базы данных в мс
         /// </summary>
-        public int Version { get; set; }
-        /// <summary>
-        /// Название/префикс для базы данных
-        /// </summary>
-        public string Name { get; set; }
-        /// <summary>
-        /// Время создания базы данных
-        /// </summary>
-        public DateTime CreationDate { get; set; }
-        /// <summary>
-        /// Общее количество записей
-        /// </summary>
-        public int RecordsCount { get; set; }
-        /// <summary>
-        /// Смещение относительно начала файла до начала списка записей с геоинформацией
-        /// </summary>
-        public uint RangesOffset { get; set; }
-        /// <summary>
-        /// Смещение относительно начала файла до начала индекса с сортировкой по названию городов
-        /// </summary>
-        public uint CitiesOffset { get; set; }
-        /// <summary>
-        /// Смещение относительно начала файла до начала индекса с сортировкой по названию городов
-        /// </summary>
-        public uint LocationsOffset { get; set; }
+        public long DatabaseLoadedTimeMs { get; set; }
 
-        public List<IpRange> IpRangeCollection { get; set; }
-        public List<Location> LocationCollection { get; set; }
 
-        public DbContext(IHostingEnvironment hostingEnvironment)
+        public GeoDatabaseContext(IHostingEnvironment hostingEnvironment, ICommonMapper mapper,
+            IHostingEnvironment environment, ILogger<GeoDatabaseContext> logger)
         {
-            IpRangeCollection = new List<IpRange>();
-            LocationCollection = new List<Location>();
-
-            Load(hostingEnvironment);
+            _logger = logger;
+            _environment = environment;
+            _mapper = mapper;
         }
 
-        public void Load(IHostingEnvironment hostingEnvironment)
+        /// <summary>
+        /// Возвращает коллекцию экземпляров заданного класса сущности
+        /// или значение NULL, если такого постоянного экземпляра нет.
+        /// </summary>
+        public IEnumerable<T> Query<T>() where T:IEntity
         {
-            string filePath = Path.Combine(hostingEnvironment.ContentRootPath, _dbFileName);
-
-            using (BinaryReader reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+            if (typeof(T) == typeof(Location))
             {
-                LoadHeader(reader);
-                LoadRanges(reader);
-                LoadLocations(reader);
-                LoadIndexes(reader);
+                return (IEnumerable<T>)GeoModel.LocationCollection;
             }
-        }
 
-        private void LoadHeader(BinaryReader reader)
-        {
-            int version = reader.ReadInt32();
-            byte[] nameBytes = new byte[32];
-            reader.Read(nameBytes, 0, 32);
-            ulong timestamp = reader.ReadUInt64();
-            int records = reader.ReadInt32();
-            uint offsetRanges = reader.ReadUInt32();
-            uint offsetCities = reader.ReadUInt32();
-            uint offsetLocations = reader.ReadUInt32();
-
-            this.Version = version;
-            this.Name = Encoding.UTF8.GetString(nameBytes, 0, nameBytes.Length);
-            this.CreationDate = UnixTimeStampToDateTime(timestamp);
-            this.RecordsCount = records;
-            this.RangesOffset = offsetRanges;
-            this.CitiesOffset = offsetCities;
-            this.LocationsOffset = offsetLocations;
-        }
-
-        private void LoadRanges(BinaryReader reader)
-        {
-            for (int i = 0; i < this.RecordsCount; i++)
+            if (typeof(T) == typeof(IpRange))
             {
-                this.IpRangeCollection.Add(new IpRange()
+                return (IEnumerable<T>)GeoModel.IpRangeCollection;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Загрузка базы данных в память
+        /// </summary>
+        /// <returns></returns>
+        public void Load()
+        {
+            string filePath = Path.Combine(_environment.ContentRootPath, _dbFileName);
+            BinGeoModel binModel;
+            using (FileStream stream = new FileStream(filePath, FileMode.Open))
+            {
+                Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+                var bufferedReader = new BufferedBinaryReader(stream, 8192);
+                stopwatch.Start();
+
+                bufferedReader.FillBuffer();
+
+                int version = bufferedReader.ReadInt32();
+                byte[] nameBytes = bufferedReader.Read(0, 32);
+                ulong timestamp = bufferedReader.ReadUInt64();
+                int records = bufferedReader.ReadInt32();
+                uint offsetRanges = bufferedReader.ReadUInt32();
+                uint offsetCities = bufferedReader.ReadUInt32();
+                uint offsetLocations = bufferedReader.ReadUInt32();
+
+                binModel = new BinGeoModel(version, nameBytes, timestamp, records, offsetRanges, offsetCities, offsetLocations);
+
+                int currentIndex = 0;
+                binModel.IpRangeCollection = new BinIpRange[binModel.RecordsCount];
+                while (bufferedReader.FillBuffer() && currentIndex < binModel.RecordsCount)
                 {
-                    IpFrom = reader.ReadUInt32(),
-                    IpTo = reader.ReadUInt32(),
-                    LocationIndex = reader.ReadUInt32()
-                });
-            }
-        }
+                    for (; currentIndex < binModel.RecordsCount && bufferedReader.NumBytesAvailable >= IpRangeBytesCount; currentIndex++)
+                    {
+                        binModel.IpRangeCollection[currentIndex] = new BinIpRange()
+                        {
+                            IpFrom = bufferedReader.ReadUInt32(),
+                            IpTo = bufferedReader.ReadUInt32(),
+                            LocationIndex = bufferedReader.ReadUInt32()
+                        };
+                    }
+                }
 
-        private void LoadLocations(BinaryReader reader)
-        {
-            for (int i = 0; i < this.RecordsCount; i++)
-            {
-                byte[] country = new byte[8];
-                byte[] region = new byte[12];
-                byte[] postal = new byte[12];
-                byte[] city = new byte[24];
-                byte[] organization = new byte[32];
-
-                reader.Read(country, 0, 8);
-                reader.Read(region, 0, 12);
-                reader.Read(postal, 0, 12);
-                reader.Read(city, 0, 24);
-                reader.Read(organization, 0, 32);
-
-                this.LocationCollection.Add(new Location()
+                currentIndex = 0;
+                binModel.LocationCollection = new BinLocation[binModel.RecordsCount];
+                while (bufferedReader.FillBuffer() && currentIndex < binModel.RecordsCount)
                 {
-                    Country = Encoding.UTF8.GetString(country, 0, country.Length),
-                    Region = Encoding.UTF8.GetString(region, 0, region.Length),
-                    Postal = Encoding.UTF8.GetString(postal, 0, postal.Length),
-                    City = Encoding.UTF8.GetString(city, 0, city.Length),
-                    Organization = Encoding.UTF8.GetString(organization, 0, organization.Length),
-                    Latitude = reader.ReadSingle(),
-                    Longitude = reader.ReadSingle()
-                });
+                    for (; currentIndex < binModel.RecordsCount && bufferedReader.NumBytesAvailable >= LocationBytesCount; currentIndex++)
+                    {
+                        byte[] country = bufferedReader.Read(0, 8);
+                        byte[] region = bufferedReader.Read(0, 12);
+                        byte[] postal = bufferedReader.Read(0, 12);
+                        byte[] city = bufferedReader.Read(0, 24);
+                        byte[] organization = bufferedReader.Read(0, 32);
+                        float latitude = bufferedReader.ReadSingle();
+                        float longitude = bufferedReader.ReadSingle();
+
+                        binModel.LocationCollection[currentIndex] = new BinLocation(country, region, postal, city, organization, latitude, longitude);
+                    }
+                }
+
+                currentIndex = 0;
+                binModel.Indexes = new uint[binModel.RecordsCount];
+                while (bufferedReader.FillBuffer() && currentIndex < binModel.RecordsCount)
+                {
+                    for (; currentIndex < binModel.RecordsCount && bufferedReader.NumBytesAvailable >= IndexBytesCount; currentIndex++)
+                    {
+                        binModel.Indexes[currentIndex] = bufferedReader.ReadUInt32();
+                    }
+                }
+
+                stopwatch.Stop();
+                DatabaseLoadedTimeMs = stopwatch.ElapsedMilliseconds;
+                _logger.LogInformation($"Database loading time: {stopwatch.ElapsedMilliseconds} ms");
             }
-        }
 
-        private void LoadIndexes(BinaryReader reader)
-        {
-
-        }
-
-        private DateTime UnixTimeStampToDateTime(ulong unixTimeStamp)
-        {
-            // Unix timestamp is seconds past epoch
-            System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
-            return dtDateTime;
+            // Отображение объектов сущностей двоичной базы в объекты бизнес сущностей
+            GeoModel = _mapper.Map<GeoModel>(binModel);
         }
     }
 }

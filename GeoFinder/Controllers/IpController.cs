@@ -8,29 +8,30 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GeoFinder.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class IpController : ControllerBase
     {
         private readonly IRangeRepository _rangeRepository;
+        private readonly ILocationRepository _locationRepository;
 
-        public IpController(IRangeRepository rangeRepository)
+        public IpController(IRangeRepository rangeRepository, ILocationRepository locationRepository)
         {
             this._rangeRepository = rangeRepository;
+            this._locationRepository = locationRepository;
         }
-
-        // GET api/values
+        
         [HttpGet]
-        public async Task<ActionResult<List<IpRange>>> Get()
+        public async Task<ActionResult<IEnumerable<IpRange>>> Get()
         {
-            return await _rangeRepository.GetAllAsync();
+            return Ok(await _rangeRepository.GetAllAsync());
         }
-
-        // GET api/values/5
+        
         [HttpGet("{ip}")]
-        public async Task<ActionResult<IpRange>> Get(string ip)
+        public async Task<ActionResult<Location>> Location(string ip)
         {
-            return await _rangeRepository.Get(ip);
+            IpRange ipRange = await _rangeRepository.GetAsync(ip);
+            return Ok(await _locationRepository.GetAsync((int)ipRange.LocationIndex));
         }
     }
 }

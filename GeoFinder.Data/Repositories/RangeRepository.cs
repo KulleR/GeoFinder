@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using GeoFinder.Data.Models;
@@ -10,16 +11,12 @@ namespace GeoFinder.Data.Repositories
 {
     public class RangeRepository : Repository<IpRange>, IRangeRepository
     {
-        public RangeRepository(DbContext databaseContext) : base(databaseContext) { }
+        public RangeRepository(GeoDatabaseContext databaseContext) : base(databaseContext) { }
 
-        public Task<List<IpRange>> GetAllAsync()
+        public Task<IpRange> GetAsync(string ip)
         {
-            return Task.Factory.StartNew(() => DbContext.IpRangeCollection);
-        }
-
-        public Task<IpRange> Get(string ip)
-        {
-            return Task.Factory.StartNew(() => DbContext.IpRangeCollection.FirstOrDefault(r => r.IpFrom.ToString() == ip));
+            uint parsedIp = BitConverter.ToUInt32(IPAddress.Parse(ip).GetAddressBytes(), 0);
+            return Task.Factory.StartNew(() => DbContext.GeoModel.IpRangeCollection.FirstOrDefault(r => r.IpFrom <= parsedIp && r.IpTo >= parsedIp));
         }
     }
 }

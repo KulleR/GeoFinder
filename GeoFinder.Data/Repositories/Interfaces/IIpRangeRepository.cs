@@ -6,14 +6,13 @@ using GeoFinder.Data.Models;
 
 namespace GeoFinder.Data.Repositories.Interfaces
 {
-    public interface IRangeRepository
+    public interface IRangeRepository : IRepository<IpRange>
     {
         /// <summary>
-        /// Загрузка всех объектов данной сущности
+        /// Загрузка информации об интервале IP адреса
         /// </summary>
-        /// <returns>Неупорядоченный список всех объектов</returns>
-        Task<List<IpRange>> GetAllAsync();
-
-        Task<IpRange> Get(string ip);
+        /// <param name="ip">IP адреса в строковом представлении</param>
+        /// <returns></returns>
+        Task<IpRange> GetAsync(string ip);
     }
 }

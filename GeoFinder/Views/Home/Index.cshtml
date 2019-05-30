@@ -1,0 +1,111 @@
+﻿
+@{
+    ViewBag.Title = "Geo Finder Application";
+}
+
+<!doctype html>
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="Content/custom-styles.css" />
+</head>
+<body>
+    <header class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">@ViewBag.Title</a>
+    </header>
+    <div class="container">
+        <div class="row pt-4">
+            <div class="col-3">
+                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <a class="nav-link active" id="v-pills-home-tab" data-toggle="pill" href="#v-pills-ip" role="tab" aria-controls="v-pills-ip" aria-selected="true">Поиск по IP</a>
+                    <a class="nav-link" id="v-pills-profile-tab" data-toggle="pill" href="#v-pills-city" role="tab" aria-controls="v-pills-city" aria-selected="false">Поиск по городу</a>
+
+                </div>
+            </div>
+            <div class="col-9">
+                <div class="tab-content" id="v-pills-tabContent">
+                    <div class="tab-pane fade show active" id="v-pills-ip" role="tabpanel" aria-labelledby="v-pills-home-tab">
+                        <form id="ip-form">
+                            <div class="form-group">
+                                <label for="ip">IP адрес</label>
+                                <input type="text" class="form-control" id="ip" aria-describedby="ipHelp" placeholder="IP адрес" required="required" pattern="(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)_*(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)_*){3}">
+                                <small id="ipHelp" class="form-text text-muted">Пример: 192.168.1.1</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Искать</button>
+                        </form>
+                        <table class="table table-hover mt-4">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Страна</th>
+                                    <th scope="col">Область</th>
+                                    <th scope="col">Индекс</th>
+                                    <th scope="col">Город</th>
+                                    <th scope="col">Организация</th>
+                                    <th scope="col">Широта</th>
+                                    <th scope="col">Долгота</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-city" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+                        <form id="city-form">
+                            <div class="form-group">
+                                <label for="city">Город</label>
+                                <input type="text" class="form-control" id="city" aria-describedby="cityHelp" placeholder="Город" required="required">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Искать</button>
+                        </form>
+                        <table class="table table-hover mt-4">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Страна</th>
+                                    <th scope="col">Область</th>
+                                    <th scope="col">Индекс</th>
+                                    <th scope="col">Город</th>
+                                    <th scope="col">Организация</th>
+                                    <th scope="col">Широта</th>
+                                    <th scope="col">Долгота</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="performance-block">
+        Database loaded: @ViewBag.DatabseLoadedTimeMs ms
+    </div>
+
+    <script type="mustache/x-tmpl" id="table_tmp">
+        <tr>
+            <td>{{country}}</td>
+            <td>{{region}}</td>
+            <td>{{postal}}</td>
+            <td>{{city}}</td>
+            <td>{{organization}}</td>
+            <td>{{latitude}}</td>
+            <td>{{longitude}}</td>
+        </tr>
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="Scripts/mustache.min.js"></script>
+    <script src="Scripts/custom-script.js"></script>
+    <script>
+        (function () {
+            var plug = new GeoPlugin();
+            plug.init();
+        })();
+    </script>
+
+</body>
+</html>
+
