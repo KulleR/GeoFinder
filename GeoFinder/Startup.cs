@@ -51,6 +51,7 @@ namespace GeoFinder
                 app.UseHsts();
                 app.UseExceptionHandler(appBuilder =>
                 {
+                    // Глобальный обработчик ошибок. Логирование ошибки и возврат сообщения с кодом 500.
                     appBuilder.Run(async context =>
                     {
                         IExceptionHandlerFeature exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();

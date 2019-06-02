@@ -40,10 +40,6 @@ namespace GeoFinder.IO.Models.BinaryFileModels
         public BinLocation[] LocationCollection { get; set; }
         public uint[] Indexes { get; set; }
 
-        //public List<BinIpRange> IpRangeCollection { get; set; }
-        //public List<BinLocation> LocationCollection { get; set; }
-        //public List<uint> Indexes { get; set; }
-
         public BinGeoModel()
         {
         }
@@ -57,10 +53,6 @@ namespace GeoFinder.IO.Models.BinaryFileModels
             RangesOffset = rangesOffset;
             CitiesOffset = citiesOffset;
             LocationsOffset = locationsOffset;
-
-            //IpRangeCollection = new List<BinIpRange>();
-            //LocationCollection = new List<BinLocation>();
-            //Indexes = new List<uint>();
         }
     }
 }

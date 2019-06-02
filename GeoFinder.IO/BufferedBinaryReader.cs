@@ -82,7 +82,7 @@ namespace GeoFinder.IO
             // Логическое сложение байтов. Каждый последующий операнд смещается на байт влево
             uint val = (uint)((int)_buffer[_bufferOffset] | (int)_buffer[_bufferOffset + 1] << 8 |
                               (int)_buffer[_bufferOffset + 2] << 16 | (int)_buffer[_bufferOffset + 3] << 24);
-
+            // Аналог чтения из буфера. Улучшение в производительности не замечено.
             //uint val = BitConverter.ToUInt32(_buffer, _bufferOffset);
 
             _bufferOffset += 4;
