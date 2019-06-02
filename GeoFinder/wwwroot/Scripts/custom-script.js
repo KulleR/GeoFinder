@@ -88,7 +88,7 @@
          */
         GeoPlugin.prototype.getLocationByIp = function(ip, successCallback, errorCallback) {
             $.ajax({
-                url: "/api/ip/location/" + ip,
+                url: "/api/ip/" + ip + "/location",
                 type: 'GET',
                 dataType: 'json',
                 success: successCallback,
@@ -104,7 +104,7 @@
          */
         GeoPlugin.prototype.getLocationByCity = function (city, successCallback, errorCallback) {
             $.ajax({
-                url: "/api/city/locations/" + city,
+                url: "/api/city/" + city + "/locations",
                 type: 'GET',
                 dataType: 'json',
                 success: successCallback,

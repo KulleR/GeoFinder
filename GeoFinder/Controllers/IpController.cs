@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GeoFinder.Controllers
 {
-    [Route("api/[controller]/[action]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class IpController : ControllerBase
     {
@@ -27,7 +27,7 @@ namespace GeoFinder.Controllers
             return Ok(await _rangeRepository.GetAllAsync());
         }
         
-        [HttpGet("{ip}")]
+        [HttpGet("{ip}/[action]")]
         public async Task<ActionResult<Location>> Location(string ip)
         {
             IpRange ipRange = await _rangeRepository.GetAsync(ip);

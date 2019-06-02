@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GeoFinder.Controllers
 {
-    [Route("api/[controller]/[action]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class CityController : ControllerBase
     {
@@ -26,7 +26,7 @@ namespace GeoFinder.Controllers
             return Ok(await _locationRepository.GetAllAsync());
         }
         
-        [HttpGet("{city}")]
+        [HttpGet("{city}/[action]")]
         public async Task<ActionResult<List<Location>>> Locations(string city)
         {
             return Ok(await _locationRepository.GetAsync(city));
